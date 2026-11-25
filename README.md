@@ -174,13 +174,17 @@ sdk.dir=D:/ai/android-sdk
 - 只在 `test-keys` 车机上有意义，正常出厂（`release-keys`）的车机签了也没用；
 - 这样签出来的包在系统眼里等同平台应用，**只给自己车机用，不要分发**。
 
-### 连得上手机还要一份连接参数
+### 连接参数
 
-构建出来的包默认连不上手机，因为配对认证要一份 `openhc-identity.json`（格式见[示例](docs/identity.example.json)）。
-**这份文件不进仓库**：里面是配网和认证用的真实密钥（`nearbyKeys`），而仓库是公开的，提交等于把自己的车机身份公开；
-`tools/check_public_tree.py` 也会拦下它（只有 `docs/identity.example.json` 这份全零占位文件允许存在）。
+配对认证要一份 `openhc-identity.json`（格式见[示例](docs/identity.example.json)）。仓库自带一份放在
+`tools/identity/data/`，clone 下来直接 `./gradlew assembleRelease -PplatformSigning` 就能出连得上手机的包。
 
-把它放在仓库外面任意目录（目录里只能有这一个文件），然后三选一：
+> **警告**：仓库自带的那份是**真实凭据**（`nearbyKeys` 里是配网和认证用的密钥）。
+> **本仓库必须保持私有**——不要改成公开、不要 fork 成公开仓库，也不要把它贴进 Issue、日志或截图。
+> `tools/check_public_tree.py` 只对这一个固定路径放行，别处出现 `openhc-identity.json` 或带 `nearbyKeys` 的 JSON 照旧拦。
+
+优先级（高到低）：环境变量 `OPENHC_IDENTITY_DIR` > `local.properties` 的 `openhc.identity.dir` > 仓库自带。
+要换成自己的那份：
 
 ```sh
 ./tools/identity/use-identity.sh D:/keys/identity/openhc-identity.json   # 自动写进 local.properties
@@ -196,7 +200,7 @@ openhc.identity.dir=D:/keys/identity
 OPENHC_IDENTITY_DIR=D:/keys/identity ./gradlew assembleRelease -PplatformSigning
 ```
 
-构建时会打进 `assets/`，验证一下：
+覆盖用的目录里只能有 `openhc-identity.json` 一个文件（构建会检查）。构建时会打进 `assets/`，验证：
 
 ```sh
 unzip -l app/build/outputs/apk/release/app-release.apk | grep openhc-identity

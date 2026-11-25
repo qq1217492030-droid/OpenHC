@@ -27,6 +27,9 @@ BUNDLED_TESTKEY = {
     "tools/platform-key/keys/platform.x509.pem",
     "tools/platform-key/keys/openhc-platform.p12",
 }
+# 另一处例外：仓库自带的连接参数。它是**真实凭据**，只有私有仓库可以放（见 SECURITY.md），
+# 路径固定死；别处出现 openhc-identity.json 或带 nearbyKeys 的 JSON 一律照旧拦。
+BUNDLED_IDENTITY = {"tools/identity/data/openhc-identity.json"}
 # 只有这份示例可以带连接参数的结构，而且密钥必须是全零占位值。
 EXAMPLE = "docs/identity.example.json"
 ZERO_BASE64 = re.compile(r"^A+=*$")
@@ -38,7 +41,7 @@ def tracked_files():
 
 
 def problems(path):
-    if path in BUNDLED_TESTKEY:
+    if path in BUNDLED_TESTKEY or path in BUNDLED_IDENTITY:
         return
     name = Path(path).name
     if name in BLOCKED_NAMES or any(part in name for part in BLOCKED_NAME_PARTS):
