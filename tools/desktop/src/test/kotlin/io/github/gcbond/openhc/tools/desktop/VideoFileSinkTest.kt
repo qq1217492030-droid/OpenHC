@@ -40,11 +40,14 @@ class VideoFileSinkTest {
 
     @Test
     fun writesFramesAndCounts() {
+        // Windows 的文件系统没有 POSIX 权限视图：0600 的断言跳过（PrivateFiles 里同样不做权限设置）。
+        val posixSupported =
+            java.nio.file.FileSystems.getDefault().supportedFileAttributeViews().contains("posix")
         val dir = Files.createTempDirectory("openhc-video-test")
         val path = dir.resolve("out.h264")
         try {
             val sink = VideoFileSink.create(path)
-            assertEquals("rw-------", PosixFilePermissions.toString(Files.getPosixFilePermissions(path)))
+            if (posixSupported) assertEquals("rw-------", PosixFilePermissions.toString(Files.getPosixFilePermissions(path)))
             val unit = AccessUnit::class.java.getDeclaredConstructor().let {
                 it.isAccessible = true
                 it.newInstance()

@@ -97,6 +97,10 @@ class FileTrustStore private constructor(
         /**
          * 原子写：先写同目录下的临时文件并刷到磁盘，再改名覆盖目标（同一文件系统内的 rename 是原子的）。
          * 中途失败时目标文件保持原样，临时文件删掉。java.io 打不开目录，改名后没法再刷目录项，这一步省掉。
+         *
+         * 改名覆盖在安卓（rename(2)）上直接成功。Windows 的桌面 JVM 上 java.io 的改名不覆盖已存在的目标，
+         * 第二次写会失败：这时把旧文件挪到旁边的 .old 再换，换不成把旧文件挪回去（旧内容不丢），成了删掉 .old。
+         * 旧文件不是普通文件（例如被目录占着）时不挪，照旧报错。
          */
         @Throws(IOException::class)
         internal fun writeAtomically(target: File, bytes: ByteArray) {
@@ -108,7 +112,17 @@ class FileTrustStore private constructor(
                     out.flush()
                     out.fd.sync()
                 }
-                if (!temp.renameTo(target)) throw IOException("把临时文件改名为 ${target.name} 失败")
+                if (!temp.renameTo(target)) {
+                    if (!target.exists()) throw IOException("把临时文件改名为 ${target.name} 失败")
+                    if (!target.isFile) throw IOException("把临时文件改名为 ${target.name} 失败（目标不是普通文件）")
+                    val backup = File(dir, ".${target.name}.old")
+                    if (!target.renameTo(backup)) throw IOException("把临时文件改名为 ${target.name} 失败（旧文件挪不开）")
+                    if (!temp.renameTo(target)) {
+                        if (backup.renameTo(target)) throw IOException("把临时文件改名为 ${target.name} 失败（已恢复旧文件）")
+                        throw IOException("把临时文件改名为 ${target.name} 失败，旧内容挪到了 ${backup.name}")
+                    }
+                    backup.delete()
+                }
             } catch (e: IOException) {
                 temp.delete()
                 throw e

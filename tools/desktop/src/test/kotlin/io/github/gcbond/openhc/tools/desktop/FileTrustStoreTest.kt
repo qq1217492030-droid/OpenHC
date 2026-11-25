@@ -23,6 +23,10 @@ class FileTrustStoreTest {
     private val carId = "0123456789ABCDEF".toByteArray(Charsets.US_ASCII)
     private val phoneId = "FEDCBA9876543210".toByteArray(Charsets.US_ASCII)
 
+    /** Windows 的文件系统没有 POSIX 权限视图：权限相关的断言和用例都跳过（PrivateFiles 里同样跳过）。 */
+    private val posixSupported =
+        java.nio.file.FileSystems.getDefault().supportedFileAttributeViews().contains("posix")
+
     @AfterTest
     fun cleanUp() {
         Files.walk(root).sorted(Comparator.reverseOrder()).forEach {
@@ -38,12 +42,12 @@ class FileTrustStoreTest {
     fun pairingIsPersistedPrivatelyAndSurvivesReopen() {
         val dir = root.resolve("trust")
         val store = FileTrustStore.open(dir)
-        assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(dir)))
+        if (posixSupported) assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(dir)))
         assertNull(store.findPeer(service, phoneId))
         store.commitPairing(identity(), peer())
 
         val file = dir.resolve(FileTrustStore.FILE_NAME)
-        assertEquals("rw-------", PosixFilePermissions.toString(Files.getPosixFilePermissions(file)))
+        if (posixSupported) assertEquals("rw-------", PosixFilePermissions.toString(Files.getPosixFilePermissions(file)))
         assertEquals(listOf(FileTrustStore.FILE_NAME), Files.list(dir).use { s -> s.map { it.fileName.toString() }.toList() }, "临时文件已改名")
 
         val reopened = FileTrustStore.open(dir)
@@ -54,6 +58,7 @@ class FileTrustStoreTest {
 
     @Test
     fun loosePermissionsAreRefused() {
+        if (!posixSupported) return
         val dir = Files.createDirectory(root.resolve("loose"), PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
         Files.setPosixFilePermissions(dir, PosixFilePermissions.fromString("rwxr-xr-x"))
         assertFailsWith<IOException> { FileTrustStore.open(dir) }
@@ -75,7 +80,7 @@ class FileTrustStoreTest {
 
     @Test
     fun failedWriteLeavesMemoryUnchanged() {
-        if (System.getProperty("user.name") == "root") return // root 不受目录权限限制，测不了写失败。
+        if (!posixSupported || System.getProperty("user.name") == "root") return // root 不受目录权限限制，测不了写失败。
         val dir = root.resolve("readonly")
         val store = FileTrustStore.open(dir)
         Files.setPosixFilePermissions(dir, PosixFilePermissions.fromString("r-x------"))
