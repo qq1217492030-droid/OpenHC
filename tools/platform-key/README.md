@@ -12,6 +12,27 @@ PKCS12 密钥库。**密钥本身是公开的，谁都签得出同样的签名**
 只在「系统真是用这把公开密钥签的」车机上有效，正常出厂（release 密钥）的车机上签了也没用，
 一切照旧。
 
+## 仓库里已经带了这份材料
+
+`keys/` 下就是这三个文件，clone 下来就能直接用，不需要先准备任何东西：
+
+| 文件 | 内容 |
+|---|---|
+| `keys/platform.pk8` | AOSP 平台测试私钥（DER 格式，公开） |
+| `keys/platform.x509.pem` | 对应的证书（公开） |
+| `keys/openhc-platform.p12` | 上面两个转好的 PKCS12（别名 `platform`，密码 `openhc`） |
+
+用法：
+
+```sh
+./gradlew assembleRelease -PplatformSigning
+```
+
+不加 `-PplatformSigning` 时完全不影响普通构建（仍是调试密钥或你配的 `openhc.signing`）。
+GitHub 上的自动化检查脚本 [check_public_tree.py](../check_public_tree.py) 对这三个路径单独放行，
+其余任何 `.pk8` / `.pem` / `.p12` / 密钥库仍会被拦下——也就是说，**只有这把公开测试密钥可以进仓库**，
+真凭据一律不行。
+
 ## 用之前先核对车机系统是不是测试密钥
 
 两个来源任选其一核对：
@@ -24,9 +45,13 @@ PKCS12 密钥库。**密钥本身是公开的，谁都签得出同样的签名**
 ## 生成密钥库
 
 1. 拿两个文件（任选其一）：
-   - 从本机已有的 AOSP 源码：`build/target/product/security/platform.pk8` 和 `platform.x509.pem`；
-   - 从 AOSP 镜像仓库下载（marshmallow-release 到最新分支里这两个文件内容是一样的）：
-     `https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/<分支名>/build/target/product/security/platform.pk8`（`platform.x509.pem` 同理）。
+   - 从本机已有的 AOSP 源码：`build/target/product/security/platform.pk8` 和 `platform.x509.pem`
+     （安卓 10 起在 `build/make/target/product/security/`）；
+   - 从 AOSP 镜像仓库下载（各分支里这两个文件内容一样，用固定分支最省事）：
+     `https://raw.githubusercontent.com/aosp-mirror/platform_build/android-6.0.1_r81/target/product/security/platform.pk8`
+     和同目录的 `platform.x509.pem`。
+     注意这两个文件在 **`platform_build`** 仓库的 `target/product/security/` 下，不在 `platform_frameworks_base`；
+     安卓 10 以后的分支在 `build/make/target/product/security/`。
 2. 跑脚本（Windows 上在 Git Bash 里跑）：
 
    ```sh
@@ -36,9 +61,10 @@ PKCS12 密钥库。**密钥本身是公开的，谁都签得出同样的签名**
    脚本会先打印证书指纹让你核对，再生成 `openhc-platform.p12`（别名 `platform`，密码 `openhc`，
    都不是秘密，密钥本身是公开的）。
 
-## 接进构建
+## 接进构建（用自己的密钥库时）
 
-在 OpenHC 目录的 `local.properties` 里写（路径指向你放配置文件的地方，文件不要进仓库）：
+仓库自带的那份加 `-PplatformSigning` 就够用了；要换成你自己转出来的密钥库，在 OpenHC 目录的
+`local.properties` 里写（路径指向你放配置文件的地方，文件不要进仓库）：
 
 ```properties
 openhc.platformSigning=D:/keys/openhc-platform-signing.properties

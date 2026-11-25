@@ -18,6 +18,15 @@ BLOCKED_SUFFIXES = {".jks", ".keystore", ".p12", ".pfx", ".pk8", ".pem", ".key",
 BLOCKED_NAMES = {"openhc-identity.json", "local.properties"}
 BLOCKED_NAME_PARTS = ("signing.properties",)
 PRIVATE_KEY_BLOCK = re.compile(rb"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")
+# 唯一放行的密钥材料：AOSP 公开测试密钥的平台签名（tools/platform-key/keys）。
+# 这把私钥是公开的（AOSP 源码树里就有、网上可下），放在仓库里只是省去使用者自己转换一次；
+# 它只对系统整包也用这把测试密钥签名的车机有用，对正常出厂的车机毫无作用。
+# 只放行这三个固定路径，其余 *.pk8 / *.pem / *.p12 照旧拦。
+BUNDLED_TESTKEY = {
+    "tools/platform-key/keys/platform.pk8",
+    "tools/platform-key/keys/platform.x509.pem",
+    "tools/platform-key/keys/openhc-platform.p12",
+}
 # 只有这份示例可以带连接参数的结构，而且密钥必须是全零占位值。
 EXAMPLE = "docs/identity.example.json"
 ZERO_BASE64 = re.compile(r"^A+=*$")
@@ -29,6 +38,8 @@ def tracked_files():
 
 
 def problems(path):
+    if path in BUNDLED_TESTKEY:
+        return
     name = Path(path).name
     if name in BLOCKED_NAMES or any(part in name for part in BLOCKED_NAME_PARTS):
         yield "这个文件不许进仓库"

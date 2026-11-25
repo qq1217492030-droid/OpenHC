@@ -28,6 +28,12 @@ Thumbs.db
 *.key
 release-signing.properties
 
+# 例外：AOSP 公开测试密钥的平台签名材料（tools/platform-key/README.md 说明了为什么它不是秘密）。
+# 只放行这三个固定文件，别的密钥照旧拦。
+!tools/platform-key/keys/platform.pk8
+!tools/platform-key/keys/platform.x509.pem
+!tools/platform-key/keys/openhc-platform.p12
+
 # 安装包与抓包、日志原始数据
 *.apk
 *.aab
