@@ -15,8 +15,10 @@
 
 ## 有线连接怎么用
 
-1. 先拿 VPN 授权：`VpnConsent.check(context)`，需要时用 Activity 拉起返回的 Intent（授权是持久的）。
-   没授权就开始会话，会以 `VPN_CONSENT_REQUIRED` 结束，且不会发 carInfo。
+1. 先拿 VPN 授权：`VpnConsent.ensureAuthorized(context)`。已授权返回 `Granted`；系统里有授权页时返回
+   `NeedsUserConsent`，用 Activity 拉起返回的 Intent（授权是持久的）；授权页被裁掉、但应用拿得到免确认授权
+   权限（平台同一把密钥签名的变体）时会自己把授权办妥。没授权就开始会话，会以 `VPN_CONSENT_REQUIRED` 结束，
+   且不会发 carInfo。
 2. 开会话：
 
    ```kotlin

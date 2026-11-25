@@ -39,7 +39,7 @@ internal class SilentBootWatch(
             silent = true,
             waitForCable = BootStart.waitForCable(app),
             identityLoaded = IdentityLoader.load(app) is IdentityLoader.Result.Loaded,
-            vpnGranted = VpnConsent.isGranted(app),
+            vpnGranted = VpnConsent.isAuthorized(app),
             wirelessPermissionsGranted = BootStart.wirelessPermissionsGranted(app),
             hotspotSupported = WirelessNetworkPlan.hotspotSupported(Build.VERSION.SDK_INT),
         )
@@ -66,7 +66,7 @@ internal class SilentBootWatch(
             SilentCheck.PENDING -> handler.postDelayed(::check, SilentConnectPolicy.POLL_MS)
             SilentCheck.OPEN_UI -> openUi("后台等待没建立起来（${snapshotText()}）")
             SilentCheck.WIRED_INSTEAD -> {
-                route = SilentConnectPolicy.wiredRoute(VpnConsent.isGranted(app))
+                route = SilentConnectPolicy.wiredRoute(VpnConsent.isAuthorized(app))
                 if (route.opensUi) return openUi("用不了无线，改等插线也缺前提（$route）")
                 Log.i(BootStart.TAG, "开机静默连接：这台车机用不了无线，改在后台等插线")
                 startWired()

@@ -14,6 +14,7 @@ import io.github.gcbond.openhc.connection.UsbAutoConnect
 import io.github.gcbond.openhc.settings.AppSettings
 import io.github.gcbond.openhc.settings.WirelessPreferences
 import io.github.gcbond.openhc.startup.BootStart
+import io.github.gcbond.openhc.platform.net.VpnConsent
 import io.github.gcbond.openhc.wireless.WirelessPermissions
 import java.io.File
 import java.io.FileOutputStream
@@ -125,6 +126,8 @@ internal object DiagnosticsExport {
             "屏幕" to "${metrics.widthPixels}x${metrics.heightPixels}，${metrics.densityDpi} dpi",
             "界面大小" to "${AppSettings(app).uiScalePercent}%",
             "连接参数" to if (IdentityLoader.load(app) is IdentityLoader.Result.Loaded) "已带" else "缺",
+            "系统里有 VPN 授权页" to yesNo(VpnConsent.canShowPage(app)),
+            "VPN 授权" to vpnStatusText(app),
             "系统读得到车机蓝牙地址" to yesNo(DeviceInfo.systemBluetoothAddress() != null),
             "只用数据线连接" to yesNo(wireless.wiredOnly),
             "无线方式" to when {
@@ -144,6 +147,15 @@ internal object DiagnosticsExport {
     }
 
     private fun yesNo(value: Boolean) = if (value) "是" else "否"
+
+    /** VPN 授权现在的状态：拿不到授权页、但拿得到免确认授权权限的车机上，说明开始连接时会自己补。 */
+    private fun vpnStatusText(app: Context): String = when (val consent = VpnConsent.check(app)) {
+        VpnConsent.Status.Granted -> "已授权"
+        is VpnConsent.Status.NeedsUserConsent -> "等用户在系统框里同意"
+        is VpnConsent.Status.Unavailable ->
+            if (VpnConsent.canSelfAuthorize(app)) "${consent.reason}；拿得到免确认授权的权限，开始连接时会自己补授权"
+            else consent.reason
+    }
 
     private fun describe(e: Throwable): String = e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName
 }

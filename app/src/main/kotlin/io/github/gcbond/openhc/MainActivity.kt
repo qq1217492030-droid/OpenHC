@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity() {
 
     private fun continueStart() {
         val kind = pendingStart ?: return
-        when (val consent = VpnConsent.check(this)) {
+        when (val consent = VpnConsent.ensureAuthorized(this)) {
             VpnConsent.Status.Granted -> {
                 pendingStart = null
                 dispatch(kind)

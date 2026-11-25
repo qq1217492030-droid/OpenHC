@@ -20,6 +20,16 @@ val signingProperties: Properties? = (
     ?.takeIf { it.isNotBlank() }
     ?.let { path -> Properties().apply { file(path).inputStream().use { load(it) } } }
 
+// 平台测试密钥签名（可选，格式同上）：给用 AOSP 公开测试密钥做平台签名的车机系统出包用（见 tools/platform-key）。
+// 这类系统把 VPN 授权页整个裁掉时，OpenHC 用同一把密钥签名就能自己完成授权。配了它时 debug 和 release
+// 都用它签：车机上升级安装认签名，调试包和正式包同签名才覆盖得上去。没配就一切照旧。
+val platformSigningProperties: Properties? = (
+    providers.environmentVariable("OPENHC_PLATFORM_SIGNING").orNull
+        ?: localProperties.getProperty("openhc.platformSigning")
+    )
+    ?.takeIf { it.isNotBlank() }
+    ?.let { path -> Properties().apply { file(path).inputStream().use { load(it) } } }
+
 // 连接参数（openhc-identity.json，格式见 docs/identity.example.json）：不进仓库，构建时从本机目录打进 assets。
 // 环境变量 OPENHC_IDENTITY_DIR 优先，其次 local.properties 的 openhc.identity.dir；都没有就不打包，装上后首页提示缺少。
 val identityFileName = "openhc-identity.json"
@@ -64,13 +74,28 @@ android {
                 keyPassword = props.getProperty("keyPassword")
             }
         }
+        platformSigningProperties?.let { props ->
+            create("platform") {
+                storeFile = file(props.getProperty("storeFile"))
+                storeType = props.getProperty("storeType")
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            if (platformSigningProperties != null) signingConfig = signingConfigs.getByName("platform")
+        }
         release {
             // 代码压缩等协议层稳定后再开；开之前要先补齐保留规则。
             isMinifyEnabled = false
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = when {
+                platformSigningProperties != null -> signingConfigs.getByName("platform")
+                else -> signingConfigs.findByName("release")
+            }
         }
     }
 

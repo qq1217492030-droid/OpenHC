@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        免用户确认的 VPN 授权（签名级权限）：普通签名拿不到它，自授权的代码路径不会被走到；
+        用系统平台同一把密钥签名的车机变体拿得到——这类系统（不少老车机的刷新包）把 VPN 授权页
+        整个裁掉了，靠它才能完成授权（VpnConsent.ensureAuthorized）。
+    -->
+    <uses-permission android:name="android.permission.CONTROL_VPN" />
+
+    <!-- 安卓 11 起查别的应用要先声明可见性：这里为的是看 VPN 授权页还在不在系统里。 -->
+    <queries>
+        <package android:name="com.android.vpndialogs" />
+    </queries>
+
     <application>
         <!--
             有线连接用的 VpnService：只为了得到一块地址由自己定的 TUN 网卡，只路由手机所在网段、只对本应用生效。

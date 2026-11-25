@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
@@ -17,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +30,7 @@ import io.github.gcbond.openhc.BuildConfig
 import io.github.gcbond.openhc.R
 import io.github.gcbond.openhc.connection.ScreenSpec
 import io.github.gcbond.openhc.settings.AppSettings
+import io.github.gcbond.openhc.startup.DeviceCapabilities
 
 /** 内容宽到这个值才排两列：两列各约 370dp 起，分段选择那排才放得下。 */
 private val TWO_COLUMN_MIN = 760.dp
@@ -83,6 +86,12 @@ internal fun SettingsScreen(
                             .fillMaxWidth()
                             .padding(bottom = 16.dp),
                     ) {
+                        // 车机系统裁了东西（没有 VPN 授权页）、或版本低到开不了热点时，先明说这台车机的现状。
+                        val appContext = LocalContext.current
+                        if (DeviceCapabilities.worthExplaining(appContext)) {
+                            DeviceCapabilitiesSection(remember(appContext) { DeviceCapabilities.read(appContext) })
+                            Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
+                        }
                         if (twoColumn) {
                             Row(Modifier.fillMaxWidth()) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(sectionGap)) {

@@ -274,7 +274,8 @@ class ConnectionController(context: Context) {
             is IdentityLoader.Result.Invalid -> return block(Notice.IdentityInvalid(loaded.reason))
         }
         // 每次开始前都重查：别的 VPN 应用被启用后，本应用的授权会被取代。
-        when (val consent = VpnConsent.check(app)) {
+        // 没有授权页的车机上这里顺带自己补授权（平台签名变体），不用用户做任何事。
+        when (val consent = VpnConsent.ensureAuthorized(app)) {
             VpnConsent.Status.Granted -> Unit
             is VpnConsent.Status.NeedsUserConsent -> return block(Notice.VpnConsentRequired)
             is VpnConsent.Status.Unavailable -> return block(Notice.VpnUnavailable(consent.reason))

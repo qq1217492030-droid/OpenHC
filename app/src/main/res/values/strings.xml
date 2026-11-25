@@ -124,6 +124,16 @@
     <string name="settings_bt_invalid">格式不对，或者是占位地址</string>
     <string name="settings_bt_hint">有线连接：手填了有效地址时优先用手填的，清空就改用车机系统里读到的。无线连接：车机系统里读得到地址时一律用系统的（手机要拿它直接连车机蓝牙，必须是真地址），读不到才用手填的。地址变了，手机会把车机当成另一台车，需要重新输入连接码配对。</string>
 
+    <!-- 设置页「这台车机」一组（只在系统裁了东西、或系统太老的车机上显示） -->
+    <string name="settings_device_title">这台车机</string>
+    <string name="settings_device_system">安卓 %1$s（API %2$d）</string>
+    <string name="settings_device_wired">数据线连接</string>
+    <string name="settings_device_wireless">无线连接</string>
+    <string name="settings_device_usable">可以</string>
+    <string name="settings_device_unusable_hint">这是车机系统决定的，OpenHC 改变不了</string>
+    <string name="settings_device_permissions_missing">还缺权限：%1$s（到系统设置里给 OpenHC 打开）</string>
+    <string name="settings_device_nothing">数据线、无线都用不了：这台车机上 OpenHC 投不了屏。</string>
+
     <!-- 通知 -->
     <string name="notification_channel_name">投屏连接</string>
     <string name="notification_projecting">OpenHC 正在投屏</string>

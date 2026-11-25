@@ -35,7 +35,7 @@
     <string name="settings_boot_silent">开机静默连接（默认关）</string>
     <string name="settings_boot_silent_hint">开启后上面的开机启动不再显示首页：有线在后台等插线，无线在后台待命，连上才显示投屏；等插线时有常驻通知。</string>
     <string name="settings_boot_silent_needs_boot">要先打开上面的「开机自动打开 OpenHC」。</string>
-    <string name="settings_boot_silent_needs_vpn">有线还没同意过 VPN 授权：在首页点一次「开始」并同意，之后开机才能在后台等插线；在那之前开机照常打开首页。</string>
+    <string name="settings_boot_silent_needs_vpn">有线还没拿到 VPN 授权：在首页点一次「开始」（系统里没有授权页时 OpenHC 会自动完成授权），之后开机才能在后台等插线；在那之前开机照常打开首页。</string>
     <string name="settings_boot_silent_needs_notifications">没有通知权限：后台等待时看不到常驻通知。点这里去开。</string>
     <string name="settings_boot_silent_wired">开机后不打开首页，在后台等插线；手机连上开始投屏时才把投屏画面带到前台（首次配对要输连接码时也会露出来）。</string>
     <string name="settings_boot_silent_wireless_both">开机后不打开首页，在后台待命：用无线连过的手机蓝牙连上车机时，打开 OpenHC 自动连接；插上手机（或开机时已经插着）就改走有线。</string>
