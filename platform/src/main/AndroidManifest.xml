@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
         免用户确认的 VPN 授权（签名级权限）：普通签名拿不到它，自授权的代码路径不会被走到；
         用系统平台同一把密钥签名的车机变体拿得到——这类系统（不少老车机的刷新包）把 VPN 授权页
         整个裁掉了，靠它才能完成授权（VpnConsent.ensureAuthorized）。
+        lint 的「只有系统应用拿得到」警告是预期内的：要的就是平台签名变体这一条路。
     -->
-    <uses-permission android:name="android.permission.CONTROL_VPN" />
+    <uses-permission
+        android:name="android.permission.CONTROL_VPN"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- 安卓 11 起查别的应用要先声明可见性：这里为的是看 VPN 授权页还在不在系统里。 -->
     <queries>

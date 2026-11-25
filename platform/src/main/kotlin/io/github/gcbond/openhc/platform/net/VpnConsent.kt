@@ -110,7 +110,11 @@ object VpnConsent {
      * 点「确定」同样的两步——把本应用登记成当前的 VPN 应用、往系统里写授权。这会顶替当前正在用的
      * 别的 VPN 应用，和授权框「确定」的行为一致。返回 null 表示调过了（成没成再查一次就知道）；
      * 否则是失败的简短说明。
+     *
+     * 反射是有意的：这个方法不在公开 SDK 里（和本模块别的隐藏 API 用法一样），目标安卓 6.0～15 都存在；
+     * 不存在时按失败报，不影响其他路径。
      */
+    @android.annotation.SuppressLint("PrivateApi")
     private fun selfAuthorize(context: Context): String? = try {
         VpnService::class.java
             .getDeclaredMethod("prepareAndAuthorize", Context::class.java)
