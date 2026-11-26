@@ -39,7 +39,7 @@ class HuaweiPhoneTest {
         assertEquals(PhoneUsbMode.NORMAL, HuaweiPhone.classify(normal(product = 0x107F)))
         assertEquals(PhoneUsbMode.NORMAL, HuaweiPhone.classify(normal(vendor = 0x339B)), "荣耀")
         assertEquals(PhoneUsbMode.USB_DEBUGGING, HuaweiPhone.classify(normal(product = 0x5000)))
-        assertEquals(PhoneUsbMode.UNSUPPORTED, HuaweiPhone.classify(normal(product = 0x1234)))
+        assertEquals(PhoneUsbMode.NORMAL, HuaweiPhone.classify(normal(product = 0x1234)), "产品号不认识也按普通状态处理：系统更新会带出新产品号")
         assertEquals(PhoneUsbMode.NOT_A_PHONE, HuaweiPhone.classify(normal(vendor = 0x1D6B)))
         assertEquals(PhoneUsbMode.NCM, HuaweiPhone.classify(ncm()), "切成网卡后产品号不变，看接口")
         assertEquals(PhoneUsbMode.NCM, HuaweiPhone.classify(ncm(product = 0x5000)))

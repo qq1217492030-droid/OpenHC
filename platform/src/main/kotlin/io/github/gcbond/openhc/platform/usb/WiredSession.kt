@@ -160,9 +160,14 @@ class WiredSession(
                 val normal = devices.firstOrNull { UsbDescriber.phoneMode(it) == PhoneUsbMode.NORMAL }
                 when {
                     normal != null -> beginPhonePermission(normal)
-                    devices.any { UsbDescriber.phoneMode(it) == PhoneUsbMode.USB_DEBUGGING } ->
+                    devices.any { UsbDescriber.phoneMode(it) == PhoneUsbMode.USB_DEBUGGING } -> {
                         setState(WiredState.UsbDebuggingOn)
-                    else -> setState(WiredState.WaitingForPhone)
+                        logWaitingDevices(devices)
+                    }
+                    else -> {
+                        setState(WiredState.WaitingForPhone)
+                        logWaitingDevices(devices)
+                    }
                 }
             }
             Phase.PERMISSION_PHONE ->
@@ -476,6 +481,25 @@ class WiredSession(
         usb.deviceList.values.filter { UsbDescriber.phoneMode(it) == PhoneUsbMode.NCM }.map { it.deviceName }.toSet()
     } catch (e: RuntimeException) {
         emptySet()
+    }
+
+    /** 上次记过的等待期设备列表，列表不变不重复记，避免每秒轮询刷屏。 */
+    private var lastWaitingDevices: String? = null
+
+    /**
+     * 等待插线/等待关 USB 调试时，把当前 USB 设备列表记进日志：用户拿着「一直等待插线」的诊断日志来时，
+     * 要能分清是系统没看到任何设备（车机 USB 归了别的互联栈管），还是看到了设备但识别不出（新厂商/产品号）。
+     * 不记序列号等设备标识。
+     */
+    private fun logWaitingDevices(devices: List<UsbDevice>) {
+        val text = if (devices.isEmpty()) {
+            "USB 设备列表为空"
+        } else {
+            "USB 设备：" + devices.joinToString(" ") { "${it.vendorId.toString(16)}:${it.productId.toString(16)}" }
+        }
+        if (text == lastWaitingDevices) return
+        lastWaitingDevices = text
+        log(text)
     }
 
     private fun log(message: String) {
