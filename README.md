@@ -127,16 +127,91 @@
 
 ## 构建
 
-需要 JDK 17 和 Android SDK 36：
+### 需要什么
 
-```sh
-./gradlew check assembleDebug
+| 项目 | 版本 | 说明 |
+|---|---|---|
+| JDK | **17** | AGP 8.11 的要求；JDK 11 会在配置阶段直接失败 |
+| Android SDK | Platform 36、Build-Tools 36 | `compileSdk`/`targetSdk` = 36，`minSdk` = 23（安卓 6.0） |
+| Python | 3.8+ | 只有 `tools/check_public_tree.py` 用；CI 在构建前跑 |
+
+`local.properties` 写本机 SDK 路径（这个文件不进仓库）：
+
+```properties
+sdk.dir=D:/ai/android-sdk
 ```
 
-安装包在 `app/build/outputs/apk/debug/`。代码结构见 [架构说明](docs/ARCHITECTURE.md)。
+### 构建
 
-要连得上手机，还需要一份连接参数文件 `openhc-identity.json`（不随源码发布，格式见 [示例](docs/identity.example.json)）：
-把它单独放进一个目录，在 `local.properties` 里写 `openhc.identity.dir=<目录>`（或设环境变量 `OPENHC_IDENTITY_DIR`），构建时会打进安装包。
+```sh
+./gradlew check assembleDebug      # 调试包
+./gradlew assembleRelease          # 正式包（签名取决于下面「签名」一节）
+```
+
+产物在 `app/build/outputs/apk/`。代码结构见 [架构说明](docs/ARCHITECTURE.md)。
+
+### 签名：三种模式
+
+| 模式 | 怎么开 | 用在什么车上 |
+|---|---|---|
+| 调试密钥（默认） | 什么都不做 | 自己调试用；和官方发布包签名不同，安装前要先卸载旧包 |
+| **平台测试密钥（仓库自带）** | `./gradlew assembleRelease -PplatformSigning` | 系统整包用 AOSP 公开测试密钥签的车机（`ro.build.tags=test-keys`） |
+| 自有发布密钥 | `local.properties` 写 `openhc.signing=<配置文件>`，或环境变量 `OPENHC_SIGNING` | 正式分发 |
+
+**平台测试密钥是什么**：这类车机系统没有任何防篡改设计——整包用 AOSP 的 `platform` 测试密钥签名，
+而这把私钥是**公开的**（AOSP 源码树 `build/target/product/security/` 里就有，网上也能直接下）。
+用同一把密钥签出来的应用，系统会当成平台签名的应用，签名级权限自动授予，其中就包括**免用户确认的 VPN 授权**
+（`CONTROL_VPN`）——正好补上这类车机把 VPN 授权页裁掉、数据线连接开不了的短板。
+
+所以这份材料放进仓库**不构成泄露**：`tools/platform-key/keys/` 下是 `platform.pk8`、`platform.x509.pem`
+和转好的 `openhc-platform.p12`（别名 `platform`，密码 `openhc`）。来源、指纹核对方法和它为什么能用，
+见 [tools/platform-key](tools/platform-key/README.md)。不想用仓库这份、或想换成自己的密钥库，就在
+`local.properties` 里写 `openhc.platformSigning=<配置文件>`——它的优先级高于仓库自带的材料。
+
+注意：
+
+- `-PplatformSigning` 只在检测到那份 `.p12` 时才生效；删掉目录或 fork 后没带它，行为回到原来的调试签名；
+- 只在 `test-keys` 车机上有意义，正常出厂（`release-keys`）的车机签了也没用；
+- 这样签出来的包在系统眼里等同平台应用，**只给自己车机用，不要分发**。
+
+### 连接参数
+
+配对认证要一份 `openhc-identity.json`（格式见[示例](docs/identity.example.json)）。仓库自带一份放在
+`tools/identity/data/`，clone 下来直接 `./gradlew assembleRelease -PplatformSigning` 就能出连得上手机的包。
+
+> **警告**：仓库自带的那份是**真实凭据**（`nearbyKeys` 里是配网和认证用的密钥）。
+> **本仓库必须保持私有**——不要改成公开、不要 fork 成公开仓库，也不要把它贴进 Issue、日志或截图。
+> `tools/check_public_tree.py` 只对这一个固定路径放行，别处出现 `openhc-identity.json` 或带 `nearbyKeys` 的 JSON 照旧拦。
+
+优先级（高到低）：环境变量 `OPENHC_IDENTITY_DIR` > `local.properties` 的 `openhc.identity.dir` > 仓库自带。
+要换成自己的那份：
+
+```sh
+./tools/identity/use-identity.sh D:/keys/identity/openhc-identity.json   # 自动写进 local.properties
+```
+
+```properties
+# 或者手动写 local.properties
+openhc.identity.dir=D:/keys/identity
+```
+
+```sh
+# 或者用环境变量（优先级最高）
+OPENHC_IDENTITY_DIR=D:/keys/identity ./gradlew assembleRelease -PplatformSigning
+```
+
+覆盖用的目录里只能有 `openhc-identity.json` 一个文件（构建会检查）。构建时会打进 `assets/`，验证：
+
+```sh
+unzip -l app/build/outputs/apk/release/app-release.apk | grep openhc-identity
+```
+
+### 构建后自检
+
+```sh
+"$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
+python3 tools/check_public_tree.py      # 确认没把凭据带进仓库
+```
 
 ## 参与
 

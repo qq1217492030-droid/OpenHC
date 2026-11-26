@@ -30,21 +30,38 @@ val platformSigningProperties: Properties? = (
     ?.takeIf { it.isNotBlank() }
     ?.let { path -> Properties().apply { file(path).inputStream().use { load(it) } } }
 
-// 连接参数（openhc-identity.json，格式见 docs/identity.example.json）：不进仓库，构建时从本机目录打进 assets。
-// 环境变量 OPENHC_IDENTITY_DIR 优先，其次 local.properties 的 openhc.identity.dir；都没有就不打包，装上后首页提示缺少。
+// 仓库自带的平台测试密钥（tools/platform-key/keys，AOSP 公开密钥）：构建时加 -PplatformSigning 就用它，
+// 不需要任何本机配置文件，clone 下来就能出平台签名的包。目录被删掉或 fork 后不带它时，按没配处理。
+// 两者都配了以配置文件为准（可以指向自己的密钥库）。
+val bundledPlatformKeystore = rootProject.file("tools/platform-key/keys/openhc-platform.p12")
+val usePlatformSigning: Boolean = platformSigningProperties != null ||
+    (providers.gradleProperty("platformSigning").isPresent && bundledPlatformKeystore.isFile)
+
+// 连接参数（openhc-identity.json，格式见 docs/identity.example.json）。
+// 优先级：环境变量 OPENHC_IDENTITY_DIR > local.properties 的 openhc.identity.dir > 仓库自带 tools/identity/data。
+// 仓库自带那份是真实凭据，只应存在于私有仓库（见 SECURITY.md）；目录里只能有这一个文件，
+// 防止把旁边的别的私有文件一起打进安装包。
 val identityFileName = "openhc-identity.json"
+val bundledIdentityDir = rootProject.file("tools/identity/data")
+
+fun checkedIdentityDir(dir: File): File {
+    val names = dir.listFiles()?.map { it.name }?.sorted()
+    require(names == listOf(identityFileName)) {
+        "连接参数目录 $dir 里必须只有 $identityFileName（实际：$names），防止把别的私有文件打进安装包"
+    }
+    return dir
+}
+
 val identityDir: File? = (
     providers.environmentVariable("OPENHC_IDENTITY_DIR").orNull
         ?: localProperties.getProperty("openhc.identity.dir")
     )
     ?.takeIf { it.isNotBlank() }
     ?.let { file(it) }
-    ?.also { dir ->
-        val names = dir.listFiles()?.map { it.name }?.sorted()
-        require(names == listOf(identityFileName)) {
-            "连接参数目录 $dir 里必须只有 $identityFileName（实际：$names），防止把别的私有文件打进安装包"
-        }
-    }
+    ?.let(::checkedIdentityDir)
+    ?: bundledIdentityDir
+        .takeIf { File(it, identityFileName).isFile }
+        ?.let(::checkedIdentityDir)
 
 android {
     namespace = "io.github.gcbond.openhc"
@@ -83,17 +100,26 @@ android {
                 keyPassword = props.getProperty("keyPassword")
             }
         }
+        if (platformSigningProperties == null && usePlatformSigning) {
+            create("platform") {
+                storeFile = bundledPlatformKeystore
+                storeType = "PKCS12"
+                storePassword = "openhc"
+                keyAlias = "platform"
+                keyPassword = "openhc"
+            }
+        }
     }
 
     buildTypes {
         debug {
-            if (platformSigningProperties != null) signingConfig = signingConfigs.getByName("platform")
+            if (usePlatformSigning) signingConfig = signingConfigs.getByName("platform")
         }
         release {
             // 代码压缩等协议层稳定后再开；开之前要先补齐保留规则。
             isMinifyEnabled = false
             signingConfig = when {
-                platformSigningProperties != null -> signingConfigs.getByName("platform")
+                usePlatformSigning -> signingConfigs.getByName("platform")
                 else -> signingConfigs.findByName("release")
             }
         }
